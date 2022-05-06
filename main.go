@@ -48,7 +48,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Error while un-marshalling the data", err)
 	}
-	fmt.Println(configData.Mappings)
+	fmt.Println(configData.UserId)
+	//fmt.Println(configData.Mappings)
 
 	content, err := ioutil.ReadFile("data.json")
 	if err != nil {
@@ -70,7 +71,7 @@ func main() {
 	// to create people in a workspace with default settings, the id (5) can also be an email address.
 	// when creating people using an email address, do not include an email attribute.
 
-	//var clientCustomer make(map[string]string)
+	//var clicentCustomer make(map[string]string)
 	// clientCustomer := make(map[string]string)
 	// for _, v := range configData.Mappings {
 	// 	//fmt.Println(v.From, v.To)
@@ -84,7 +85,8 @@ func main() {
 		var id string
 		for _, k := range configData.Mappings {
 			if k.From == configData.UserId {
-				id = k.From
+				id = fmt.Sprint(v[k.From])
+				fmt.Println(id)
 			}
 			temp[k.To] = v[k.From]
 		}

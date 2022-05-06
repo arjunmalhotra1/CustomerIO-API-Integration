@@ -1,6 +1,6 @@
 {
     "parallelism": 25,
-    "userId": "id",
+    "userId": "id_from",
     "mappings": 
     [
         {
@@ -9,7 +9,31 @@
         },
         {
             "from": "email_from",
-            "to": "email_to"
+            "to": "email"
+        },
+        {
+            "from": "id_from",
+            "to": "id_to"
+        },
+        {
+            "from": "created_at_from",
+            "to": "created_at_to"
+        },
+        {
+            "from": "last_name_from",
+            "to": "last_name_to"
+        },
+        {
+            "from": "location_from",
+            "to": "location_to"
+        },
+        {
+            "from": "hirable_from",
+            "to": "hirable_to"
+        },
+        {
+            "from": "bio_from",
+            "to": "bio_to"
         }
     ]
 }
