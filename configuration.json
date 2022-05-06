@@ -1,0 +1,15 @@
+{
+    "parallelism": 25,
+    "userId": "id",
+    "mappings": 
+    [
+        {
+            "from": "first_name_from",
+            "to": "first_name_to"
+        },
+        {
+            "from": "email_from",
+            "to": "email_to"
+        }
+    ]
+}
