@@ -1,38 +1,38 @@
 {
     "parallelism": 25,
-    "userId": "id_from",
+    "userId": "id",
     "mappings": 
     [
         {
-            "from": "first_name_from",
+            "from": "first_name",
             "to": "first_name"
         },
         {
-            "from": "email_from",
+            "from": "email",
             "to": "email"
         },
         {
-            "from": "id_from",
+            "from": "id",
             "to": "id"
         },
         {
-            "from": "created_at_from",
+            "from": "created_at",
             "to": "created_at"
         },
         {
-            "from": "last_name_from",
+            "from": "last_name",
             "to": "last_name"
         },
         {
-            "from": "location_from",
+            "from": "location",
             "to": "location"
         },
         {
-            "from": "hirable_from",
+            "from": "hirable",
             "to": "hirable"
         },
         {
-            "from": "bio_from",
+            "from": "bio",
             "to": "bio"
         }
     ]
