@@ -115,19 +115,21 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				site_id_base_64 := base64.StdEncoding.EncodeToString([]byte("e7192b0752ef138df135"))
-				api_key_base_64 := base64.StdEncoding.EncodeToString([]byte("89f446c3ada96eb5c73b"))
-				bearer := "Bearer " + site_id_base_64 + ":" + api_key_base_64
+				//site_id_base_64 := base64.StdEncoding.EncodeToString([]byte("e7192b0752ef138df135"))
+				//api_key_base_64 := base64.StdEncoding.EncodeToString([]byte("89f446c3ada96eb5c73b"))
+				//key := site_id_base_64 + ":" + api_key_base_64
+				bearer := "Basic " + base64.StdEncoding.EncodeToString([]byte("e7192b0752ef138df135:89f446c3ada96eb5c73b"))
 				// add authorization header to the req
 				req.Header.Add("Authorization", bearer)
 				// set the request header Content-Type for json
 				req.Header.Add("Content-Type", "application/json; charset=utf-8")
+				//fmt.Println("req: ", req)
 				resp, err := client.Do(req)
 				if err != nil {
 					panic(err)
 				}
 				//fmt.Println("Here")
-				fmt.Println("resp:", resp)
+				fmt.Println("resp:", resp.Status)
 			}
 			//fmt.Println("Shut down signal received")
 		}()
