@@ -5,7 +5,7 @@
     [
         {
             "from": "first_name_from",
-            "to": "first_name_to"
+            "to": "first_name"
         },
         {
             "from": "email_from",
@@ -13,27 +13,27 @@
         },
         {
             "from": "id_from",
-            "to": "id_to"
+            "to": "id"
         },
         {
             "from": "created_at_from",
-            "to": "created_at_to"
+            "to": "created_at"
         },
         {
             "from": "last_name_from",
-            "to": "last_name_to"
+            "to": "last_name"
         },
         {
             "from": "location_from",
-            "to": "location_to"
+            "to": "location"
         },
         {
             "from": "hirable_from",
-            "to": "hirable_to"
+            "to": "hirable"
         },
         {
             "from": "bio_from",
-            "to": "bio_to"
+            "to": "bio"
         }
     ]
 }

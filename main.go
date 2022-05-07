@@ -1,109 +1,147 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
-
-	"github.com/customerio/go-customerio"
+	"net/http"
+	"os"
 )
 
 type Mapping struct {
 	From string `json:"from"`
 	To   string `json:"to"`
 }
-
 type Configuration struct {
 	Parallelism int       `json:"parallelism"`
 	UserId      string    `json:"userid"`
 	Mappings    []Mapping `json:"mappings"`
 }
 
-// type data struct {
-// 	id         int
-// 	created_at string
-// 	first_name string
-// 	last_name  string
-// 	email      string
-// 	location   string
-// 	hirable    bool
-// 	bio        string
-// }
+type dataSend struct {
+	Body map[string]interface{}
+	id   string
+}
 
-// type YourJson struct {
-// 	YourSample []struct {
-// 		data map[string]string
-// 	}
-// }
+var configData Configuration
 
-func main() {
-	contentConfig, err := ioutil.ReadFile("configuration.json")
+var data map[string]interface{}
+
+//var readChan chan (dataSend)
+
+func readConfigFile(fileString string) {
+	contentConfig, err := ioutil.ReadFile(fileString)
 	if err != nil {
 		log.Fatal("Error while opening the file - ", err)
 	}
-
-	var configData Configuration
 	err = json.Unmarshal(contentConfig, &configData)
 	if err != nil {
 		log.Fatal("Error while un-marshalling the data", err)
 	}
-	fmt.Println(configData.UserId)
-	//fmt.Println(configData.Mappings)
+	fmt.Println("Read Config file completed")
+}
 
-	content, err := ioutil.ReadFile("data.json")
+// func readDataFile(fileString string) []byte {
+// 	content, err := ioutil.ReadFile("data.json")
+// 	if err != nil {
+// 		log.Fatal("Error while opening the file - ", err)
+// 	}
+
+// 	err = json.Unmarshal(content, &data)
+// 	if err != nil {
+// 		log.Fatal("Error while un-marshalling the data", err)
+// 	}
+// 	return content
+// }
+
+func readDataFile(filePath string) {
+
+	file, err := os.Open(filePath)
 	if err != nil {
-		log.Fatal("Error while opening the file - ", err)
+		log.Fatalln("Error while opening the file: ", err)
 	}
+	defer file.Close()
 
-	var data []map[string]interface{}
-	// var data []map[string]interface{}
-	//var data YourJson
-	err = json.Unmarshal(content, &data)
+	decoder := json.NewDecoder(file)
+
+	tken, err := decoder.Token()
 	if err != nil {
-		log.Fatal("Error while un-marshalling the data", err)
+		log.Fatalln("Error while decoding a token: ", err)
 	}
-	fmt.Println(data[0]["bio"])
-	fmt.Println(len(data))
+	fmt.Println(tken)
 
-	track := customerio.NewTrackClient("e7192b0752ef138df135", "89f446c3ada96eb5c73b", customerio.WithRegion(customerio.RegionUS))
-
-	// to create people in a workspace with default settings, the id (5) can also be an email address.
-	// when creating people using an email address, do not include an email attribute.
-
-	//var clicentCustomer make(map[string]string)
-	// clientCustomer := make(map[string]string)
-	// for _, v := range configData.Mappings {
-	// 	//fmt.Println(v.From, v.To)
-	// 	clientCustomer[v.From] = v.To
-	// }
-
-	//fmt.Println(clientCustomer)
-
-	for _, v := range data {
+	for decoder.More() {
 		temp := make(map[string]interface{})
 		var id string
+		decoder.Decode(&data)
 		for _, k := range configData.Mappings {
 			if k.From == configData.UserId {
-				id = fmt.Sprint(v[k.From])
-				fmt.Println(id)
+				id = fmt.Sprint(data[k.From])
+				log.Println(id)
 			}
-			temp[k.To] = v[k.From]
+			temp[k.To] = data[k.From]
 		}
+		ds := dataSend{
+			Body: temp,
+			id:   id,
+		}
+		readChan <- ds
+	}
+	fmt.Println("Read Data file completed")
+}
 
-		if err := track.Identify(id, temp); err != nil {
-			log.Println(err)
-		}
+func main() {
+	readConfigFile("configuration.json")
+	readChan := make(chan dataSend)
+	children := configData.Parallelism
+	for c := 0; c < children; c++ {
+		go func() {
+			for ds := range readChan {
+				// initialize http client
+				client := &http.Client{}
+				jsonBody, _ := json.Marshal(ds.Body)
+				// set the HTTP method, url, and request body
+				req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://track.customer.io/api/v1/customers/%s", ds.id), bytes.NewBuffer(jsonBody))
+				if err != nil {
+					panic(err)
+				}
+				var bearer = "Bearer " + "e7192b0752ef138df135:89f446c3ada96eb5c73b"
+				// add authorization header to the req
+				req.Header.Add("Authorization", bearer)
+				// set the request header Content-Type for json
+				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				resp, err := client.Do(req)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println(resp.StatusCode)
+			}
+		}()
 	}
 
-	// if err := track.Identify("5", map[string]interface{}{
-	// 	"emaila":     "bob@example.com",
-	// 	"created_at": time.Now().Unix(),
-	// 	"first_name": "Bob-2",
-	// 	"plan":       "basic",
-	// }); err != nil {
-	// 	log.Println(err)
+	readDataFile("data.json")
+
+	//fmt.Println(data[0]["bio"])
+	//fmt.Println(len(data))
+
+	// track := customerio.NewTrackClient("e7192b0752ef138df135", "89f446c3ada96eb5c73b", customerio.WithRegion(customerio.RegionUS))
+
+	// for _, v := range data {
+	// 	temp := make(map[string]interface{})
+	// 	var id string
+	// 	for _, k := range configData.Mappings {
+	// 		if k.From == configData.UserId {
+	// 			id = fmt.Sprint(v[k.From])
+	// 			fmt.Println(id)
+	// 		}
+	// 		temp[k.To] = v[k.From]
+	// 	}
+
+	// 	if err := track.Identify(id, temp); err != nil {
+	// 		log.Println(err)
+	// 	}
 	// }
-	//}
 
 }
