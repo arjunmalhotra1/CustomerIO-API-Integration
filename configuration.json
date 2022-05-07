@@ -1,6 +1,8 @@
 {
     "parallelism": 25,
     "userId": "id",
+    "site_id":"e7192b0752ef138df135",
+    "api_key":"89f446c3ada96eb5c73b",
     "mappings": 
     [
         {

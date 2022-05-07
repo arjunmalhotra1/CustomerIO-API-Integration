@@ -19,6 +19,8 @@ type Mapping struct {
 type Configuration struct {
 	Parallelism int       `json:"parallelism"`
 	UserId      string    `json:"userid"`
+	SiteId      string    `json:"site_id"`
+	APIKey      string    `json:"api_key"`
 	Mappings    []Mapping `json:"mappings"`
 }
 
@@ -30,6 +32,7 @@ type dataSend struct {
 var configData Configuration
 
 var data map[string]interface{}
+var wg sync.WaitGroup
 
 var readChan chan (dataSend)
 
@@ -46,7 +49,6 @@ func readConfigFile(fileString string) {
 }
 
 func readDataFile(filePath string) {
-
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatalln("Error while opening the file: ", err)
@@ -59,20 +61,13 @@ func readDataFile(filePath string) {
 	if err != nil {
 		log.Fatalln("Error while reading the opening token: ", err)
 	}
-	//fmt.Println(tken)
-
-	//count := 0
-
 	for decoder.More() {
-		//fmt.Println(count)
-		//count++
 		temp := make(map[string]interface{})
 		var Cid string
 		decoder.Decode(&data)
 		for _, k := range configData.Mappings {
 			if k.From == configData.UserId {
 				Cid = fmt.Sprint(data[k.From])
-				//log.Println(Cid)
 			}
 			temp[k.To] = data[k.From]
 		}
@@ -87,56 +82,51 @@ func readDataFile(filePath string) {
 		log.Fatalln("Error while reading the ending token: ", err)
 	}
 	fmt.Println("Read Data file completed")
-	//close(readChan)
+}
+
+func sendUsingLibrary() {
+	// track := customerio.NewTrackClient("e7192b0752ef138df135", "89f446c3ada96eb5c73b", customerio.WithRegion(customerio.RegionUS))
+	// if err := track.Identify(ds.id, ds.Body); err != nil {
+	// 	log.Println(err)
+	// }
+}
+
+func sendUsingHttp() {
+	defer wg.Done()
+	for ds := range readChan {
+		// initialize http client
+		client := &http.Client{}
+		jsonBody, _ := json.Marshal(ds.Body)
+		// set the HTTP method, url, and request body
+		req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://track.customer.io/api/v1/customers/%s", ds.id), bytes.NewBuffer(jsonBody))
+		if err != nil {
+			panic(err)
+		}
+		key := fmt.Sprintf("%s:%s", configData.SiteId, configData.APIKey)
+		bearer := "Basic " + base64.StdEncoding.EncodeToString([]byte(key))
+		// add authorization header to the req
+		req.Header.Add("Authorization", bearer)
+		// set the request header Content-Type for json
+		req.Header.Add("Content-Type", "application/json; charset=utf-8")
+		resp, err := client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("resp:", resp.Status)
+	}
 }
 
 func main() {
 	readChan = make(chan dataSend)
-	var wg sync.WaitGroup
 	readConfigFile("configuration.json")
 	children := configData.Parallelism
-	fmt.Println("children", children)
-	// track := customerio.NewTrackClient("e7192b0752ef138df135", "89f446c3ada96eb5c73b", customerio.WithRegion(customerio.RegionUS))
+
 	for c := 0; c < children; c++ {
 		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for ds := range readChan {
-				//time.Sleep(1000)
-				//fmt.Println(ds)
-				// if err := track.Identify(ds.id, ds.Body); err != nil {
-				// 	log.Println(err)
-				// }
-				// initialize http client
-				client := &http.Client{}
-				jsonBody, _ := json.Marshal(ds.Body)
-				// set the HTTP method, url, and request body
-				req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://track.customer.io/api/v1/customers/%s", ds.id), bytes.NewBuffer(jsonBody))
-				if err != nil {
-					panic(err)
-				}
-				//site_id_base_64 := base64.StdEncoding.EncodeToString([]byte("e7192b0752ef138df135"))
-				//api_key_base_64 := base64.StdEncoding.EncodeToString([]byte("89f446c3ada96eb5c73b"))
-				//key := site_id_base_64 + ":" + api_key_base_64
-				bearer := "Basic " + base64.StdEncoding.EncodeToString([]byte("e7192b0752ef138df135:89f446c3ada96eb5c73b"))
-				// add authorization header to the req
-				req.Header.Add("Authorization", bearer)
-				// set the request header Content-Type for json
-				req.Header.Add("Content-Type", "application/json; charset=utf-8")
-				//fmt.Println("req: ", req)
-				resp, err := client.Do(req)
-				if err != nil {
-					panic(err)
-				}
-				//fmt.Println("Here")
-				fmt.Println("resp:", resp.Status)
-			}
-			//fmt.Println("Shut down signal received")
-		}()
+		go sendUsingHttp()
 	}
 
 	readDataFile("data.json")
 	close(readChan)
 	wg.Wait()
-	fmt.Println("Waiting")
 }
