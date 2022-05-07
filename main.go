@@ -1,14 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"sync"
-
-	"github.com/customerio/go-customerio"
 )
 
 type Mapping struct {
@@ -71,7 +72,7 @@ func readDataFile(filePath string) {
 		for _, k := range configData.Mappings {
 			if k.From == configData.UserId {
 				Cid = fmt.Sprint(data[k.From])
-				log.Println(Cid)
+				//log.Println(Cid)
 			}
 			temp[k.To] = data[k.From]
 		}
@@ -95,7 +96,7 @@ func main() {
 	readConfigFile("configuration.json")
 	children := configData.Parallelism
 	fmt.Println("children", children)
-	track := customerio.NewTrackClient("e7192b0752ef138df135", "89f446c3ada96eb5c73b", customerio.WithRegion(customerio.RegionUS))
+	// track := customerio.NewTrackClient("e7192b0752ef138df135", "89f446c3ada96eb5c73b", customerio.WithRegion(customerio.RegionUS))
 	for c := 0; c < children; c++ {
 		wg.Add(1)
 		go func() {
@@ -103,30 +104,32 @@ func main() {
 			for ds := range readChan {
 				//time.Sleep(1000)
 				//fmt.Println(ds)
-				if err := track.Identify(ds.id, ds.Body); err != nil {
-					log.Println(err)
+				// if err := track.Identify(ds.id, ds.Body); err != nil {
+				// 	log.Println(err)
+				// }
+				// initialize http client
+				client := &http.Client{}
+				jsonBody, _ := json.Marshal(ds.Body)
+				// set the HTTP method, url, and request body
+				req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://track.customer.io/api/v1/customers/%s", ds.id), bytes.NewBuffer(jsonBody))
+				if err != nil {
+					panic(err)
 				}
-				// // initialize http client
-				// client := &http.Client{}
-				// jsonBody, _ := json.Marshal(ds.Body)
-				// // set the HTTP method, url, and request body
-				// req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://track.customer.io/api/v1/customers/%s", ds.id), bytes.NewBuffer(jsonBody))
-				// if err != nil {
-				// 	panic(err)
-				// }
-				// var bearer = "Bearer " + "e7192b0752ef138df135:89f446c3ada96eb5c73b"
-				// // add authorization header to the req
-				// req.Header.Set("Authorization", bearer)
-				// // set the request header Content-Type for json
-				// req.Header.Set("Content-Type", "application/json; charset=utf-8")
-				// resp, err := client.Do(req)
-				// if err != nil {
-				// 	panic(err)
-				// }
-				// fmt.Println("Here")
-				// fmt.Println("resp:", resp.StatusCode)
+				site_id_base_64 := base64.StdEncoding.EncodeToString([]byte("e7192b0752ef138df135"))
+				api_key_base_64 := base64.StdEncoding.EncodeToString([]byte("89f446c3ada96eb5c73b"))
+				bearer := "Bearer " + site_id_base_64 + ":" + api_key_base_64
+				// add authorization header to the req
+				req.Header.Add("Authorization", bearer)
+				// set the request header Content-Type for json
+				req.Header.Add("Content-Type", "application/json; charset=utf-8")
+				resp, err := client.Do(req)
+				if err != nil {
+					panic(err)
+				}
+				//fmt.Println("Here")
+				fmt.Println("resp:", resp)
 			}
-			fmt.Println("Shut down signal received")
+			//fmt.Println("Shut down signal received")
 		}()
 	}
 
