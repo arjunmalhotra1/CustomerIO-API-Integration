@@ -29,7 +29,7 @@ var configData Configuration
 
 var data map[string]interface{}
 
-//var readChan chan (dataSend)
+var readChan chan (dataSend)
 
 func readConfigFile(fileString string) {
 	contentConfig, err := ioutil.ReadFile(fileString)
@@ -40,6 +40,7 @@ func readConfigFile(fileString string) {
 	if err != nil {
 		log.Fatal("Error while un-marshalling the data", err)
 	}
+	//fmt.Println("%+v", configData)
 	fmt.Println("Read Config file completed")
 }
 
@@ -57,7 +58,7 @@ func readConfigFile(fileString string) {
 // }
 
 func readDataFile(filePath string) {
-
+	readChan = make(chan dataSend)
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatalln("Error while opening the file: ", err)
@@ -72,7 +73,11 @@ func readDataFile(filePath string) {
 	}
 	fmt.Println(tken)
 
+	count := 0
+
 	for decoder.More() {
+		fmt.Println(count)
+		count++
 		temp := make(map[string]interface{})
 		var id string
 		decoder.Decode(&data)
@@ -87,18 +92,24 @@ func readDataFile(filePath string) {
 			Body: temp,
 			id:   id,
 		}
+		//fmt.Println(ds)
 		readChan <- ds
 	}
 	fmt.Println("Read Data file completed")
+	//close(readChan)
 }
 
 func main() {
+	// var wg sync.WaitGroup
 	readConfigFile("configuration.json")
-	readChan := make(chan dataSend)
 	children := configData.Parallelism
+	fmt.Println("children", children)
 	for c := 0; c < children; c++ {
+		// 	wg.Add(1)
 		go func() {
 			for ds := range readChan {
+				//fmt.Println(ds)
+				//defer wg.Done()
 				// initialize http client
 				client := &http.Client{}
 				jsonBody, _ := json.Marshal(ds.Body)
@@ -122,6 +133,8 @@ func main() {
 	}
 
 	readDataFile("data.json")
+	//close(readChan)
+	//	wg.Wait()
 
 	//fmt.Println(data[0]["bio"])
 	//fmt.Println(len(data))
