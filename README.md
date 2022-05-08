@@ -19,4 +19,4 @@ The documentation [here](https://customer.io/docs/api/#operation/identify) state
 Customer.io will not create a new profile, even if the identifier in the path isn't found. Hence allowing only updates.
 We would need to add the above line for each of the users in the data.config file.
 On the scale of 1-10 this is not hacky since this is how customer.io has specifications defined so I would say 1.
-Edge cases I would be concerned about would be what if a user gives "false" and expects customer.io to start inserting new users.
+Edge cases I would be concerned about would be what if a user gives "false" as set _update and expects customer.io to start inserting new users.
