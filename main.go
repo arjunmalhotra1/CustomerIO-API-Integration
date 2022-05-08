@@ -35,9 +35,11 @@ var configData Configuration
 
 var data map[string]interface{}
 var wg sync.WaitGroup
-
 var readChan chan (dataSend)
 
+const retries = 3
+
+// readConfigFile reads the config file.
 func readConfigFile(fileString string) {
 	contentConfig, err := ioutil.ReadFile(fileString)
 	if err != nil {
@@ -47,9 +49,10 @@ func readConfigFile(fileString string) {
 	if err != nil {
 		log.Fatal("Error while un-marshalling the data", err)
 	}
-	fmt.Println("Read Config file completed")
+	fmt.Println("Reading the Config file completed")
 }
 
+// readDataFile reads the data file.
 func readDataFile(filePath string) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -83,7 +86,7 @@ func readDataFile(filePath string) {
 	if err != nil {
 		log.Fatalln("Error while reading the ending token: ", err)
 	}
-	fmt.Println("Read Data file completed")
+	fmt.Println("Reading the data file completed")
 }
 
 var backoffSchedule = []time.Duration{
@@ -103,13 +106,13 @@ func sendUsingHttp() {
 		if err != nil {
 			panic(err)
 		}
+		// Encoding the key to base64.
 		key := fmt.Sprintf("%s:%s", configData.SiteId, configData.APIKey)
 		bearer := "Basic " + base64.StdEncoding.EncodeToString([]byte(key))
 		// add authorization header to the req
 		req.Header.Add("Authorization", bearer)
 		// set the request header Content-Type for json
 		req.Header.Add("Content-Type", "application/json; charset=utf-8")
-		retries := 3
 		attempt := 0
 		resp, err := client.Do(req)
 		if resp.StatusCode != http.StatusOK {
@@ -117,9 +120,9 @@ func sendUsingHttp() {
 			if resp.StatusCode == http.StatusRequestTimeout {
 				for attempt < retries {
 					resp, err = client.Do(req)
-					if err != nil {
+					if resp.StatusCode != http.StatusOK {
 						resp.Body.Close()
-						log.Printf("Error for user %s, %v", ds.id, err)
+						log.Printf("Attempt: %d Error for user %s, %v \n", attempt+1, ds.id, resp)
 						time.Sleep(backoffSchedule[attempt])
 						attempt++
 					} else {
