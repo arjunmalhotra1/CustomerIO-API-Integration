@@ -99,7 +99,7 @@ func sendUsingHttp() {
 		client := &http.Client{}
 		jsonBody, _ := json.Marshal(ds.Body)
 		// set the HTTP method, url, and request body
-		req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://track.customer.io/api/v1/customers/%s", ds.id), bytes.NewBuffer(jsonBody))
+		req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://track.customer.io/api/v1dsadasdasda/customers/%s", ds.id), bytes.NewBuffer(jsonBody))
 		if err != nil {
 			panic(err)
 		}
@@ -111,33 +111,40 @@ func sendUsingHttp() {
 		req.Header.Add("Content-Type", "application/json; charset=utf-8")
 		retries := 3
 		attempt := 0
-		var resp *http.Response
-		resp, err = client.Do(req)
-		if err != nil {
+		resp, err := client.Do(req)
+		if resp.StatusCode != http.StatusOK {
 			// handling request time out.
 			if resp.StatusCode == http.StatusRequestTimeout {
 				for attempt < retries {
 					resp, err = client.Do(req)
 					if err != nil {
+						resp.Body.Close()
 						log.Printf("Error for user %s, %v", ds.id, err)
 						time.Sleep(backoffSchedule[attempt])
 						attempt++
 					} else {
+						resp.Body.Close()
 						log.Printf("Request for user: %s succeeded ", ds.id)
-						break
+						continue
 					}
 				}
 				if attempt == retries {
+					resp.Body.Close()
 					log.Printf("Request for user: %s failed", ds.id)
-					// TODO: Some sought of return here.
+					continue
 				}
 			}
 			// Handling StatusUnauthorized error.
 			if resp.StatusCode == http.StatusUnauthorized {
-				log.Println("Please check the site_id and api_key in the config file.")
-				// TODO: Some sought of return here.
+				resp.Body.Close()
+				log.Fatalln("Please check the site_id and api_key in the config file.")
+
 			}
+			resp.Body.Close()
+			log.Printf("Unexpected error for user: %s status code: %d error: %+v \n", ds.id, resp.StatusCode, err)
+			continue
 		}
+		resp.Body.Close()
 		log.Printf("Request for user: %s succeeded ", ds.id)
 	}
 }
