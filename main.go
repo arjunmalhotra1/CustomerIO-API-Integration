@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 )
 
 type Mapping struct {
@@ -38,7 +39,6 @@ var wg sync.WaitGroup
 var readChan chan (dataSend)
 
 func readConfigFile(fileString string) {
-	//fmt.Println(fileString)
 	contentConfig, err := ioutil.ReadFile(fileString)
 	if err != nil {
 		log.Fatal("Error while opening the file - ", err)
@@ -86,6 +86,12 @@ func readDataFile(filePath string) {
 	fmt.Println("Read Data file completed")
 }
 
+var backoffSchedule = []time.Duration{
+	1 * time.Second,
+	3 * time.Second,
+	10 * time.Second,
+}
+
 func sendUsingHttp() {
 	defer wg.Done()
 	for ds := range readChan {
@@ -103,11 +109,36 @@ func sendUsingHttp() {
 		req.Header.Add("Authorization", bearer)
 		// set the request header Content-Type for json
 		req.Header.Add("Content-Type", "application/json; charset=utf-8")
-		resp, err := client.Do(req)
+		retries := 3
+		attempt := 0
+		var resp *http.Response
+		resp, err = client.Do(req)
 		if err != nil {
-			panic(err)
+			// handling request time out.
+			if resp.StatusCode == http.StatusRequestTimeout {
+				for attempt < retries {
+					resp, err = client.Do(req)
+					if err != nil {
+						log.Printf("Error for user %s, %v", ds.id, err)
+						time.Sleep(backoffSchedule[attempt])
+						attempt++
+					} else {
+						log.Printf("Request for user: %s succeeded ", ds.id)
+						break
+					}
+				}
+				if attempt == retries {
+					log.Printf("Request for user: %s failed", ds.id)
+					// TODO: Some sought of return here.
+				}
+			}
+			// Handling StatusUnauthorized error.
+			if resp.StatusCode == http.StatusUnauthorized {
+				log.Println("Please check the site_id and api_key in the config file.")
+				// TODO: Some sought of return here.
+			}
 		}
-		fmt.Println("resp:", resp.Status)
+		log.Printf("Request for user: %s succeeded ", ds.id)
 	}
 }
 
