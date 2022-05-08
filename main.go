@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -37,6 +38,7 @@ var wg sync.WaitGroup
 var readChan chan (dataSend)
 
 func readConfigFile(fileString string) {
+	//fmt.Println(fileString)
 	contentConfig, err := ioutil.ReadFile(fileString)
 	if err != nil {
 		log.Fatal("Error while opening the file - ", err)
@@ -84,13 +86,6 @@ func readDataFile(filePath string) {
 	fmt.Println("Read Data file completed")
 }
 
-func sendUsingLibrary() {
-	// track := customerio.NewTrackClient("e7192b0752ef138df135", "89f446c3ada96eb5c73b", customerio.WithRegion(customerio.RegionUS))
-	// if err := track.Identify(ds.id, ds.Body); err != nil {
-	// 	log.Println(err)
-	// }
-}
-
 func sendUsingHttp() {
 	defer wg.Done()
 	for ds := range readChan {
@@ -116,9 +111,19 @@ func sendUsingHttp() {
 	}
 }
 
+var configFile *string
+var dataFile *string
+
+func init() {
+	configFile = flag.String("config", "", "config file")
+	dataFile = flag.String("data", "", "data file")
+	flag.Parse()
+
+}
+
 func main() {
 	readChan = make(chan dataSend)
-	readConfigFile("configuration.json")
+	readConfigFile(*configFile)
 	children := configData.Parallelism
 
 	for c := 0; c < children; c++ {
@@ -126,7 +131,7 @@ func main() {
 		go sendUsingHttp()
 	}
 
-	readDataFile("data.json")
+	readDataFile(*dataFile)
 	close(readChan)
 	wg.Wait()
 }
