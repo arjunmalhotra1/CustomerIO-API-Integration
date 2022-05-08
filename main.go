@@ -38,6 +38,7 @@ var wg sync.WaitGroup
 var readChan chan (dataSend)
 
 const retries = 3
+const url = "https://track.customer.io/api/v1/customers/"
 
 // readConfigFile reads the config file.
 func readConfigFile(fileString string) {
@@ -102,7 +103,7 @@ func sendUsingHttp() {
 		client := &http.Client{}
 		jsonBody, _ := json.Marshal(ds.Body)
 		// set the HTTP method, url, and request body
-		req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://track.customer.io/api/v1dsadasdasda/customers/%s", ds.id), bytes.NewBuffer(jsonBody))
+		req, err := http.NewRequest(http.MethodPut, fmt.Sprintf(url+ds.id), bytes.NewBuffer(jsonBody))
 		if err != nil {
 			panic(err)
 		}
