@@ -1,4 +1,4 @@
-# CustomerIO Api Integration.
+# CustomerIO API Integration.
 The goal of the
 script is to sync user data from local files to the Customer.io API.
 The descriptions of `data.json` and `configuration.json` can be found below.
